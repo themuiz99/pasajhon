@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เว็บแปลภาษาโจร</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for better Thai display */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Ensure no vertical scrolling by making sure content fits viewport */
+        html, body {
+            overflow-y: hidden; /* ป้องกันการเลื่อนแนวตั้งของหน้าเว็บทั้งหมด */
+            height: 100%; /* ทำให้ body มีความสูงเต็มหน้าจอ */
+        }
+        .container-height-adjust {
+            /* คำนวณความสูงสูงสุดของคอนเทนเนอร์เพื่อให้พอดีกับ viewport */
+            /* 100vh คือ 100% ของความสูง viewport, ลบ 2rem (ซึ่งคือ padding p-4 ของ body) */
+            max-height: calc(100vh - 2rem);
+            overflow-y: auto; /* อนุญาตให้เลื่อนภายในคอนเทนเนอร์นี้ได้ ถ้าเนื้อหาเยอะเกินไป */
+        }
+
+        /* Specific adjustments for smaller screens if needed, though Tailwind handles much of it */
+        @media (max-width: 640px) { /* Small screens */
+            .text-4xl {
+                font-size: 2.5rem; /* ปรับขนาดหัวข้อให้เล็กลงสำหรับหน้าจอเล็กมากๆ */
+            }
+            .text-lg {
+                font-size: 1rem; /* ปรับขนาดข้อความ label ให้เล็กลง */
+            }
+            .py-3 {
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+            .px-8 {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
+            .py-2 {
+                padding-top: 0.375rem;
+                padding-bottom: 0.375rem;
+            }
+            .px-4 {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-black min-h-screen flex items-center justify-center p-4">
+    <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 hover:scale-105 container-height-adjust">
+        <h1 class="text-4xl font-extrabold text-center text-gray-100 mb-6">
+            เว็บแปลภาษาโจร 🤫
+        </h1>
+
+        <div class="mb-3">
+            <label for="sourceInput" class="block text-gray-300 text-lg font-semibold mb-2">
+                กรอกข้อความตรงนี้เลยค่ะ (ภาษาไทย หรือ ภาษามั่วๆ):
+            </label>
+            <textarea id="sourceInput" rows="3"
+                class="w-full p-3 border border-gray-600 rounded-lg bg-gray-700 text-gray-50 focus:ring-blue-500 focus:border-blue-500 text-base resize-none shadow-sm"
+                placeholder="เช่น สวัสดีค่ะ สบายดีไหมคะ? หรือ zax3des0lkm9a2c_sp_lko3o2i..."></textarea>
+        </div>
+
+        <div class="flex justify-center mb-5">
+            <button id="translateBtn"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-7 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-lg">
+                แปลงเลย! ✨
+            </button>
+        </div>
+
+        <div class="mb-3">
+            <label for="targetOutput" class="block text-gray-300 text-lg font-semibold mb-2">
+                ผลลัพธ์:
+            </label>
+            <textarea id="targetOutput" rows="3" readonly
+                class="w-full p-3 border border-gray-600 rounded-lg bg-gray-700 text-gray-50 focus:ring-blue-500 focus:border-blue-500 text-base resize-none shadow-sm"
+                placeholder="ผลลัพธ์จะปรากฏที่นี่..."></textarea>
+            <div class="flex flex-col sm:flex-row justify-end gap-2 mt-3">
+                <button id="copyOutputBtn"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 px-3 rounded-full shadow-md transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 text-sm">
+                    คัดลอกผลลัพธ์ 📋
+                </button>
+                <button id="clearTextBtn"
+                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-3 rounded-full shadow-md transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 text-sm">
+                    ล้างข้อความทั้งหมด 🗑️
+                </button>
+            </div>
+        </div>
+
+        <div id="messageBox" class="hidden bg-blue-900 border border-blue-700 text-blue-200 px-4 py-3 rounded-lg relative mt-4" role="alert">
+            <strong class="font-bold">ข้อความ:</strong>
+            <span class="block sm:inline" id="messageText"></span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onclick="document.getElementById('messageBox').classList.add('hidden');">
+                <svg class="fill-current h-6 w-6 text-blue-400" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>ปิด</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 2.65a1.2 1.2 0 1 1-1.697-1.697L8.303 10l-2.651-2.651a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-2.651a1.2 1.2 0 1 1 1.697 1.697L11.697 10l2.651 2.651a1.2 1.2 0 0 1 0 1.698z"/></svg>
+            </span>
+        </div>
+
+        <div class="text-center text-gray-400 text-sm mt-5">
+            Created by TheMuiz X มะลิ
+        </div>
+    </div>
+
+    <script>
+        // Mapping Thai characters to unique gibberish strings
+        const thaiToGibberishMap = new Map([
+            ['ก', 'zax3'], ['ข', 'qwe7'], ['ค', 'asd9'], ['ง', 'fgh2'], ['จ', 'jkl5'],
+            ['ฉ', 'poi1'], ['ช', 'uyt6'], ['ซ', 'rew8'], ['ฌ', 'cvb4'], ['ญ', 'nmk0'],
+            ['ฎ', 'lko3'], ['ฏ', 'ijh7'], ['ฐ', 'gfd9'], ['ฑ', 'saq2'], ['ฒ', 'wex5'],
+            ['ณ', 'dcr1'], ['ด', 'vft6'], ['ต', 'bgy8'], ['ถ', 'nhu4'], ['ท', 'mjy0'],
+            ['ธ', 'ikl3'], ['น', 'opm7'], ['บ', 'lkm9'], ['ป', 'njh2'], ['ผ', 'gfv5'],
+            ['ฝ', 'cdx1'], ['พ', 'zse6'], ['ฟ', 'qaz8'], ['ภ', 'wsx4'], ['ม', 'edc0'],
+            ['ย', 'rfv3'], ['ร', 'tgb7'], ['ล', 'yhn9'], ['ว', 'ujm2'], ['ศ', 'ikn5'],
+            ['ษ', 'olm1'], ['ส', 'pko6'], ['ห', 'ijh8'], ['ฬ', 'gfr4'], ['อ', 'des0'],
+            ['ฮ', 'xza3'],
+            ['ะ', 'a1b'], ['า', 'a2c'], ['ิ', 'i1d'], ['ี', 'i2e'], ['ึ', 'u1f'],
+            ['ื', 'u2g'], ['ุ', 'o1h'], ['ู', 'o2i'], ['เ', 'e1j'], ['แ', 'e2k'],
+            ['โ', 'o3l'], ['ใ', 'a3m'], ['ไ', 'a4n'], ['ำ', 'amx'], ['ฤ', 'ruy'],
+            ['ฦ', 'luz'],
+            ['็', 't1p'], ['่', 't2q'], ['้', 't3r'], ['๊', 't4s'], ['๋', 't5t'],
+            ['ๆ', 'repx'], ['ฯ', 'etcy'],
+            ['๐', 'n0a'], ['๑', 'n1b'], ['๒', 'n2c'], ['๓', 'n3d'], ['๔', 'n4e'],
+            ['๕', 'n5f'], ['๖', 'n6g'], ['๗', 'n7h'], ['๘', 'n8i'], ['๙', 'n9j'],
+            [' ', '_sp_'], ['.', '_dot_'], [',', '_com_'], ['?', '_que_'], ['!', '_exc_'],
+            ['(', '_opn_'], [')', '_cls_'], ['-', '_dsh_'], ['+', '_pls_'], ['=', '_eql_'],
+            ['/', '_slh_'], ['\\', '_bsh_'], ['*', '_str_'], ['&', '_amp_'], ['%', '_pct_'],
+            ['#', '_hsh_'], ['@', '_at_'], ['$', '_dlr_'], ['^', '_crt_'], ['<', '_lt_'],
+            ['>', '_gt_'], ['[', '_obr_'], [']', '_cbr_'], ['{', '_ocu_'], ['}', '_ccu_'],
+            [':', '_col_'], [';', '_scl_'], ['"', '_dqt_'], ["'", '_sqt_'], ['`', '_bkt_'],
+            ['~', '_tld_'], ['|', '_pip_']
+        ]);
+
+        // Create a reverse map for decoding
+        const gibberishToThaiMap = new Map();
+        for (let [thaiChar, gibberishString] of thaiToGibberishMap.entries()) {
+            gibberishToThaiMap.set(gibberishString, thaiChar);
+        }
+
+        // Sort gibberish keys by length in descending order to ensure longest match first during decoding
+        const sortedGibberishKeys = Array.from(gibberishToThaiMap.keys()).sort((a, b) => b.length - a.length);
+
+        const sourceInput = document.getElementById('sourceInput');
+        const targetOutput = document.getElementById('targetOutput');
+        const translateBtn = document.getElementById('translateBtn'); // Single translate button
+        const copyOutputBtn = document.getElementById('copyOutputBtn');
+        const clearTextBtn = document.getElementById('clearTextBtn');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+
+        // Function to show a message in the message box
+        function showMessage(message, type = 'info') {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+            if (type === 'error') {
+                messageBox.classList.remove('bg-blue-900', 'border-blue-700', 'text-blue-200');
+                messageBox.classList.add('bg-red-900', 'border-red-700', 'text-red-200');
+            } else {
+                messageBox.classList.remove('bg-red-900', 'border-red-700', 'text-red-200');
+                messageBox.classList.add('bg-blue-900', 'border-blue-700', 'text-blue-200');
+            }
+        }
+
+        // Function to translate Thai to Gibberish
+        function thaiToGibberishTranslator(text) {
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (thaiToGibberishMap.has(char)) {
+                    result += thaiToGibberishMap.get(char);
+                } else {
+                    // If character is not in our map (e.g., English letters, other symbols), keep it as is
+                    result += char;
+                }
+            }
+            return result;
+        }
+
+        // Function to translate Gibberish to Thai
+        function gibberishToThaiTranslator(text) {
+            let result = '';
+            let i = 0;
+            while (i < text.length) {
+                let matched = false;
+                // Try to match the longest possible gibberish key first
+                for (const gibberishKey of sortedGibberishKeys) {
+                    if (text.substring(i, i + gibberishKey.length) === gibberishKey) {
+                        result += gibberishToThaiMap.get(gibberishKey);
+                        i += gibberishKey.length;
+                        matched = true;
+                        break; // Move to the next part of the text after a match
+                    }
+                }
+                if (!matched) {
+                    // If no gibberish key matches, assume it's an original character (e.g., English letter or unmatched symbol)
+                    result += text[i];
+                    i++;
+                }
+            }
+            return result;
+        }
+
+        // Function to detect if the input text is likely gibberish
+        function isGibberish(text) {
+            // Check if the text contains at least one of our gibberish codes
+            // A more robust check might involve checking the ratio of gibberish codes to regular characters
+            for (const gibberishKey of sortedGibberishKeys) {
+                if (text.includes(gibberishKey)) {
+                    return true;
+                }
+            }
+            // If no known gibberish codes are found, assume it's Thai
+            return false;
+        }
+
+        // Event listener for the single "Translate" button
+        translateBtn.addEventListener('click', () => {
+            const inputText = sourceInput.value.trim();
+            if (inputText === '') {
+                showMessage('กรุณาใส่ข้อความก่อนนะคะ!', 'error');
+                return;
+            }
+
+            if (isGibberish(inputText)) {
+                // If it looks like gibberish, translate to Thai
+                const thaiText = gibberishToThaiTranslator(inputText);
+                targetOutput.value = thaiText;
+                showMessage('แปลงกลับเป็นภาษาไทยเรียบร้อยแล้วค่ะ! ✨');
+            } else {
+                // Otherwise, assume it's Thai and translate to gibberish
+                const gibberishText = thaiToGibberishTranslator(inputText);
+                targetOutput.value = gibberishText;
+                showMessage('แปลงเป็นภาษามั่วๆ เรียบร้อยแล้วค่ะ! 🥳');
+            }
+        });
+
+        // Event listener for "Copy Output" button
+        copyOutputBtn.addEventListener('click', () => {
+            const outputText = targetOutput.value;
+            if (outputText === '') {
+                showMessage('ไม่มีผลลัพธ์ให้คัดลอกนะคะ!', 'error');
+                return;
+            }
+            targetOutput.select();
+            targetOutput.setSelectionRange(0, 99999); // For mobile devices
+            try {
+                document.execCommand('copy');
+                showMessage('คัดลอกผลลัพธ์เรียบร้อยแล้วค่ะ! ✅');
+            } catch (err) {
+                showMessage('ไม่สามารถคัดลอกได้ค่ะ ลองคัดลอกด้วยตัวเองดูนะคะ 🙁', 'error');
+            }
+        });
+
+        // Event listener for "Clear All Text" button
+        clearTextBtn.addEventListener('click', () => {
+            sourceInput.value = '';
+            targetOutput.value = '';
+            showMessage('ล้างข้อความทั้งหมดเรียบร้อยแล้วค่ะ! 🧹');
+        });
+
+        // Optional: Clear target output and hide message when typing in source input
+        sourceInput.addEventListener('input', () => {
+            if (targetOutput.value !== '') {
+                targetOutput.value = '';
+            }
+            messageBox.classList.add('hidden'); // Hide message when typing
+        });
+    </script>
+</body>
+</html>
+
+
