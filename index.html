@@ -11,12 +11,12 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Ensure no vertical scrolling by making sure content fits viewport */
+        /* Allow vertical scrolling for the whole page if content overflows */
         html, body {
-            /* overflow-y: hidden; Removed to allow body to stretch, rely on inner container for overflow */
             height: 100%; /* ทำให้ body มีความสูงเต็มหน้าจอ */
             margin: 0; /* Remove default body margin */
             padding: 0; /* Remove default body padding */
+            overflow-y: auto; /* Allow vertical scrolling on the body */
         }
         .full-screen-container {
             min-height: 100vh; /* Make sure this container takes full viewport height */
@@ -38,14 +38,22 @@
             transform: scale(1); /* Initial scale */
             transition: all 0.3s ease-in-out; /* Smooth transition for hover effect */
             position: relative; /* Essential for absolute positioning of message box */
-            /* Ensure inner content can scroll if it overflows the card height */
             display: flex;
             flex-direction: column;
             gap: 1.5rem; /* Spacing between sections */
-            /* Add this to allow inner scrolling if content exceeds viewport height */
-            max-height: calc(100vh - 2rem); /* Calculate max height based on viewport and body padding */
-            overflow-y: auto; /* Allow scrolling within the card if content is too long */
         }
+
+        /* Styles for input and output textareas to prevent internal scrolling and enable auto-resize */
+        #sourceInput,
+        #targetOutput {
+            overflow-y: hidden !important; /* Forces the textarea to expand, no internal scrollbar */
+            resize: none; /* Prevent manual resizing of the textarea */
+        }
+        /* Make targetOutput completely non-interactive for input */
+        #targetOutput {
+            pointer-events: none;
+        }
+
 
         /* Specific adjustments for smaller screens, Tailwind handles most responsiveness */
         @media (max-width: 640px) { /* Small screens */
@@ -89,10 +97,10 @@
                 <!-- Source input textarea for user to type text -->
                 <textarea id="sourceInput" rows="3"
                     class="w-full p-3 border border-gray-600 rounded-lg bg-gray-700 text-gray-50 focus:ring-blue-500 focus:border-blue-500 text-base resize-none shadow-sm"
-                    placeholder="เช่น สวัสดีค่ะ สบายดีไหมคะ? หรือ zax3des0lkm9a2c_sp_lko3o2i..."></textarea>
+                    placeholder="เช่น สวัสดีค่ะ สบายดีไหมคะ? หรือ Hello, how are you?"></textarea>
             </div>
 
-            <!-- Button to clear the source input, replacing the old translate button -->
+            <!-- Button to clear the source input -->
             <div class="flex justify-center mb-5">
                 <button id="clearSourceInputBtn"
                     class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-7 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-lg">
@@ -105,10 +113,10 @@
                     กูแปลให้ล่ะ.. นี้คือผลลัพธ์มึง!
                 </label>
                 <!-- Target output textarea to display translated text -->
-                <textarea id="targetOutput" rows="3" readonly
-                    class="w-full p-3 border border-gray-600 rounded-lg bg-gray-700 text-gray-50 focus:ring-blue-500 focus:border-blue-500 text-base resize-none shadow-sm"
+                <textarea id="targetOutput" readonly
+                    class="w-full p-3 border border-gray-600 rounded-lg bg-gray-700 text-gray-50 focus:ring-blue-500 focus:border-blue-500 text-base shadow-sm"
                     placeholder="ผลลัพธ์จะปรากฏที่นี่..."></textarea>
-                <!-- Only the copy button remains at the bottom right -->
+                <!-- Copy button -->
                 <div class="flex flex-col sm:flex-row justify-end gap-2 mt-3">
                     <button id="copyOutputBtn"
                         class="bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 px-3 rounded-full shadow-md transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 text-sm">
@@ -117,10 +125,9 @@
                 </div>
             </div>
 
-            <!-- Message box for displaying feedback to the user, now absolutely positioned to prevent layout shifts -->
-            <!-- Positioned relative to .content-card, centered at the bottom -->
-            <div id="messageBox" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-11/12 max-w-sm bg-blue-900 border border-blue-700 text-blue-200 px-4 py-3 rounded-lg z-50" role="alert">
-                <strong class="font-bold">ข้อความ:</strong>
+            <!-- Message box for displaying feedback to the user.
+                 Its position will be dynamically set by JavaScript. -->
+            <div id="messageBox" class="hidden absolute w-auto bg-blue-900 border border-blue-700 text-blue-200 text-center px-4 py-3 rounded-lg z-50 whitespace-nowrap" role="alert">
                 <span class="block sm:inline" id="messageText"></span>
                 <!-- Close button for the message box -->
                 <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onclick="document.getElementById('messageBox').classList.add('hidden');">
@@ -135,32 +142,59 @@
     </div>
 
     <script>
-        // Mapping Thai characters to unique gibberish strings
+        // Mapping characters to unique gibberish strings.
+        // Vowels are replaced with emojis. Spaces are replaced randomly with -, _, *.
         const thaiToGibberishMap = new Map([
-            ['ก', 'zax3'], ['ข', 'qwe7'], ['ค', 'asd9'], ['ง', 'fgh2'], ['จ', 'jkl5'],
-            ['ฉ', 'poi1'], ['ช', 'uyt6'], ['ซ', 'rew8'], ['ฌ', 'cvb4'], ['ญ', 'nmk0'],
-            ['ฎ', 'lko3'], ['ฏ', 'ijh7'], ['ฐ', 'gfd9'], ['ฑ', 'saq2'], ['ฒ', 'wex5'],
-            ['ณ', 'dcr1'], ['ด', 'vft6'], ['ต', 'bgy8'], ['ถ', 'nhu4'], ['ท', 'mjy0'],
-            ['ธ', 'ikl3'], ['น', 'opm7'], ['บ', 'lkm9'], ['ป', 'njh2'], ['ผ', 'gfv5'],
-            ['ฝ', 'cdx1'], ['พ', 'zse6'], ['ฟ', 'qaz8'], ['ภ', 'wsx4'], ['ม', 'edc0'],
-            ['ย', 'rfv3'], ['ร', 'tgb7'], ['ล', 'yhn9'], ['ว', 'ujm2'], ['ศ', 'ikn5'],
-            ['ษ', 'olm1'], ['ส', 'pko6'], ['ห', 'ijh8'], ['ฬ', 'gfr4'], ['อ', 'des0'],
-            ['ฮ', 'xza3'],
-            ['ะ', 'a1b'], ['า', 'a2c'], ['ิ', 'i1d'], ['ี', 'i2e'], ['ึ', 'u1f'],
-            ['ื', 'u2g'], ['ุ', 'o1h'], ['ู', 'o2i'], ['เ', 'e1j'], ['แ', 'e2k'],
-            ['โ', 'o3l'], ['ใ', 'a3m'], ['ไ', 'a4n'], ['ำ', 'amx'], ['ฤ', 'ruy'],
-            ['ฦ', 'luz'],
+            // Thai Consonants (3-character codes)
+            ['ก', 'axx'], ['ข', 'bxx'], ['ค', 'cxx'], ['ง', 'dxx'], ['จ', 'exx'],
+            ['ฉ', 'fxx'], ['ช', 'gxx'], ['ซ', 'hxx'], ['ฌ', 'ixx'], ['ญ', 'jxx'],
+            ['ฎ', 'kxx'], ['ฏ', 'lxx'], ['ฐ', 'mxx'], ['ฑ', 'nxx'], ['ฒ', 'oxx'],
+            ['ณ', 'pxx'], ['ด', 'qxx'], ['ต', 'rxx'], ['ถ', 'sxx'], ['ท', 'txx'],
+            ['ธ', 'uxx'], ['น', 'vxx'], ['บ', 'wxx'], ['ป', 'yxx'], ['ผ', 'zxx'],
+            ['ฝ', 'xaz'], ['พ', 'xby'], ['ฟ', 'xcz'], ['ภ', 'xdy'], ['ม', 'xez'],
+            ['ย', 'xfy'], ['ร', 'xgz'], ['ล', 'xhy'], ['ว', 'xiz'], ['ศ', 'xjy'],
+            ['ษ', 'xkz'], ['ส', 'xly'], ['ห', 'xmz'], ['ฬ', 'xny'], ['อ', 'xoz'],
+            ['ฮ', 'xpy'],
+            // Thai Vowels (using emojis as per request)
+            // Note: Emojis can have varying lengths in JS string representation,
+            // so the decoding logic will rely on `sortedGibberishKeys` to match longest first.
+            ['ะ', '🌸'], ['า', '🌼'], ['ิ', '🌿'], ['ี', '🍀'], ['ึ', '🍄'],
+            ['ื', '💧'], ['ุ', '🔥'], ['ู', '🌈'], ['เ', '🌟'], ['แ', '⚡'],
+            ['โ', '💡'], ['ใ', '💎'], ['ไ', '👑'], ['ำ', '💖'], ['ฤ', '🦋'],
+            ['ฦ', '🌙'],
+            // Thai Tone Marks & Special Characters (3-character codes)
             ['็', 't1p'], ['่', 't2q'], ['้', 't3r'], ['๊', 't4s'], ['๋', 't5t'],
-            ['ๆ', 'repx'], ['ฯ', 'etcy'],
-            ['๐', 'n0a'], ['๑', 'n1b'], ['๒', 'n2c'], ['๓', 'n3d'], ['๔', 'n4e'],
-            ['๕', 'n5f'], ['๖', 'n6g'], ['๗', 'n7h'], ['๘', 'n8i'], ['๙', 'n9j'],
-            [' ', '_sp_'], ['.', '_dot_'], [',', '_com_'], ['?', '_que_'], ['!', '_exc_'],
-            ['(', '_opn_'], [')', '_cls_'], ['-', '_dsh_'], ['+', '_pls_'], ['=', '_eql_'],
-            ['/', '_slh_'], ['\\', '_bsh_'], ['*', '_str_'], ['&', '_amp_'], ['%', '_pct_'],
-            ['#', '_hsh_'], ['@', '_at_'], ['$', '_dlr_'], ['^', '_crt_'], ['<', '_lt_'],
-            ['>', '_gt_'], ['[', '_obr_'], [']', '_cbr_'], ['{', '_ocu_'], ['}', '_ccu_'],
-            [':', '_col_'], [';', '_scl_'], ['"', '_dqt_'], ["'", '_sqt_'], ['`', '_bkt_'],
-            ['~', '_tld_'], ['|', '_pip_']
+            ['ๆ', 'rex'], ['ฯ', 'etc'],
+            // Thai Numbers (3-character codes)
+            ['๐', 'n00'], ['๑', 'n11'], ['๒', 'n22'], ['๓', 'n33'], ['๔', 'n44'],
+            ['๕', 'n55'], ['๖', 'n66'], ['๗', 'n77'], ['๘', 'n88'], ['๙', 'n99'],
+            // English Uppercase Letters (3-character codes)
+            ['A', 'eA0'], ['B', 'eB0'], ['C', 'eC0'], ['D', 'eD0'], ['E', 'eE0'],
+            ['F', 'eF0'], ['G', 'eG0'], ['H', 'eH0'], ['I', 'eI0'], ['J', 'eJ0'],
+            ['K', 'eK0'], ['L', 'eL0'], ['M', 'eM0'], ['N', 'eN0'], ['O', 'eO0'],
+            ['P', 'eP0'], ['Q', 'eQ0'], ['R', 'eR0'], ['S', 'eS0'], ['T', 'eT0'],
+            ['U', 'eU0'], ['V', 'eV0'], ['W', 'eW0'], ['X', 'eX0'], ['Y', 'eY0'],
+            ['Z', 'eZ0'],
+            // English Lowercase Letters (3-character codes)
+            ['a', 'ea1'], ['b', 'eb1'], ['c', 'ec1'], ['d', 'ed1'], ['e', 'ee1'],
+            ['f', 'ef1'], ['g', 'eg1'], ['h', 'eh1'], ['i', 'ei1'], ['j', 'ej1'],
+            ['k', 'ek1'], ['l', 'el1'], ['m', 'em1'], ['n', 'en1'], ['o', 'eo1'],
+            ['p', 'ep1'], ['q', 'eq1'], ['r', 'er1'], ['s', 'es1'], ['t', 'et1'],
+            ['u', 'eu1'], ['v', 'ev1'], ['w', 'ew1'], ['x', 'ex1'], ['y', 'ey1'],
+            ['z', 'ez1'],
+            // Arabic Numerals (0-9) (3-character codes)
+            ['0', 'num'], ['1', 'nu1'], ['2', 'nu2'], ['3', 'nu3'], ['4', 'nu4'],
+            ['5', 'nu5'], ['6', 'nu6'], ['7', 'nu7'], ['8', 'nu8'], ['9', 'nu9'],
+            // Common Symbols (3-character codes)
+            ['.', 'dot'], [',', 'com'], ['?', 'que'], ['!', 'exc'],
+            ['(', 'opn'], [')', 'cls'], ['-', 'dsh'], ['+', 'pls'], ['=', 'eql'],
+            ['/', 'slh'], ['\\', 'bsh'], ['*', 'str'], ['&', 'amp'], ['%', 'pct'],
+            ['#', 'hsh'], ['@', 'at_'], ['$', 'dlr'], ['^', 'crt'], ['<', 'lt_'],
+            ['>', 'gt_'], ['[', 'obr'], [']', 'cbr'], ['{', 'ocu'], ['}', 'ccu'],
+            [':', 'col'], [';', 'scl'], ['"', 'dqt'], ["'", 'sqt'], ['`', 'bkt'],
+            ['~', 'tld'], ['|', 'pip']
+            // Space (' ') is handled dynamically in toGibberishTranslator,
+            // but its inverse mapping is in gibberishToThaiMap below.
         ]);
 
         // Create a reverse map for decoding
@@ -168,51 +202,74 @@
         for (let [thaiChar, gibberishString] of thaiToGibberishMap.entries()) {
             gibberishToThaiMap.set(gibberishString, thaiChar);
         }
+        // Add specific mappings for space replacements for decoding
+        gibberishToThaiMap.set('-', ' ');
+        gibberishToThaiMap.set('_', ' ');
+        gibberishToThaiMap.set('*', ' ');
+
+        // Space replacement characters for encoding
+        const spaceReplacements = ['-', '_', '*'];
 
         // Sort gibberish keys by length in descending order to ensure longest match first during decoding
+        // This is crucial now that some codes (emojis) might have different lengths.
         const sortedGibberishKeys = Array.from(gibberishToThaiMap.keys()).sort((a, b) => b.length - a.length);
 
         const sourceInput = document.getElementById('sourceInput');
         const targetOutput = document.getElementById('targetOutput');
-        const clearSourceInputBtn = document.getElementById('clearSourceInputBtn'); // Button to clear source input
+        const clearSourceInputBtn = document.getElementById('clearSourceInputBtn');
         const copyOutputBtn = document.getElementById('copyOutputBtn');
         const messageBox = document.getElementById('messageBox');
         const messageText = document.getElementById('messageText');
 
-        // Function to show a message in the message box
-        function showMessage(message, type = 'info') {
+        // Function to show a message in the message box with dynamic positioning
+        function showMessage(message, type = 'info', position = 'top') {
+            // Clear all previous positioning classes
+            messageBox.classList.remove('top-8', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'right-0', 'w-auto', 'max-w-xs');
+            
             messageText.textContent = message;
             messageBox.classList.remove('hidden');
+
             if (type === 'error') {
                 messageBox.classList.remove('bg-blue-900', 'border-blue-700', 'text-blue-200');
                 messageBox.classList.add('bg-red-900', 'border-red-700', 'text-red-200');
             } else {
-                messageBox.classList.remove('bg-red-900', 'border-red-700', 'text-blue-200');
+                messageBox.classList.remove('bg-red-900', 'border-red-700', 'text-red-200');
                 messageBox.classList.add('bg-blue-900', 'border-blue-700', 'text-blue-200');
             }
-            // Automatically hide the message after 3 seconds
+
+            // Apply specific positioning based on the 'position' parameter
+            if (position === 'top') {
+                messageBox.classList.add('top-8', 'left-1/2', '-translate-x-1/2', 'w-auto', 'max-w-xs');
+            } else if (position === 'bottom') {
+                // Position below the copy button, centered under the content-card
+                messageBox.classList.add('bottom-4', 'left-1/2', '-translate-x-1/2', 'w-auto', 'max-w-xs');
+            }
+            
+            // Automatically hide the message after 2 seconds
             setTimeout(() => {
                 messageBox.classList.add('hidden');
-            }, 3000);
+            }, 2000); // 2000 milliseconds = 2 seconds
         }
 
-        // Function to translate Thai to Gibberish
-        function thaiToGibberishTranslator(text) {
+        // Function to translate regular characters to Gibberish
+        function toGibberishTranslator(text) {
             let result = '';
             for (let i = 0; i < text.length; i++) {
                 const char = text[i];
-                if (thaiToGibberishMap.has(char)) {
+                if (char === ' ') { // Handle space specifically with random replacement
+                    result += spaceReplacements[Math.floor(Math.random() * spaceReplacements.length)];
+                } else if (thaiToGibberishMap.has(char)) {
                     result += thaiToGibberishMap.get(char);
                 } else {
-                    // If character is not in our map (e.g., English letters, other symbols), keep it as is
+                    // If character is not in our map (e.g., truly unrecognized symbol), keep it as is
                     result += char;
                 }
             }
             return result;
         }
 
-        // Function to translate Gibberish to Thai
-        function gibberishToThaiTranslator(text) {
+        // Function to translate Gibberish to regular characters
+        function fromGibberishTranslator(text) {
             let result = '';
             let i = 0;
             while (i < text.length) {
@@ -227,7 +284,7 @@
                     }
                 }
                 if (!matched) {
-                    // If no gibberish key matches, assume it's an original character (e.g., English letter or unmatched symbol)
+                    // If no gibberish key matches, assume it's an original character
                     result += text[i];
                     i++;
                 }
@@ -238,34 +295,42 @@
         // Function to detect if the input text is likely gibberish
         function isGibberish(text) {
             // Check if the text contains at least one of our gibberish codes
-            // A more robust check might involve checking the ratio of gibberish codes to regular characters
             for (const gibberishKey of sortedGibberishKeys) {
                 if (text.includes(gibberishKey)) {
                     return true;
                 }
             }
-            // If no known gibberish codes are found, assume it's Thai
             return false;
         }
 
-        // Event listener for source input to perform automatic translation
+        // Function to adjust textarea height dynamically
+        function adjustTextareaHeight(textarea) {
+            textarea.style.height = 'auto'; // Reset height to recalculate
+            textarea.style.height = (textarea.scrollHeight) + 'px'; // Set height to fit content
+        }
+
+        // Event listener for source input to perform automatic translation and adjust output height
         sourceInput.addEventListener('input', () => {
-            const inputText = sourceInput.value.trim();
+            const inputText = sourceInput.value; // Don't trim here, allow leading/trailing spaces for height
             if (inputText === '') {
                 targetOutput.value = ''; // Clear output if input is empty
                 messageBox.classList.add('hidden'); // Hide message
+                adjustTextareaHeight(sourceInput); // Adjust source height even when cleared
+                adjustTextareaHeight(targetOutput); // Adjust target height even when cleared
                 return;
             }
 
             if (isGibberish(inputText)) {
-                // If it looks like gibberish, translate to Thai
-                const thaiText = gibberishToThaiTranslator(inputText);
-                targetOutput.value = thaiText;
+                // If it looks like gibberish, translate back to original characters
+                const originalText = fromGibberishTranslator(inputText);
+                targetOutput.value = originalText;
             } else {
-                // Otherwise, assume it's Thai and translate to gibberish
-                const gibberishText = thaiToGibberishTranslator(inputText);
+                // Otherwise, assume it's original text and translate to gibberish
+                const gibberishText = toGibberishTranslator(inputText);
                 targetOutput.value = gibberishText;
             }
+            adjustTextareaHeight(sourceInput); // Adjust source height after new content is set
+            adjustTextareaHeight(targetOutput); // Adjust target height after new content is set
             // Hide message box after translation to avoid clutter unless there's an error.
             if (!messageBox.classList.contains('bg-red-900')) { // Don't hide if it's an error message
                 messageBox.classList.add('hidden');
@@ -277,31 +342,38 @@
         copyOutputBtn.addEventListener('click', () => {
             const outputText = targetOutput.value;
             if (outputText === '') {
-                showMessage('ไม่มีผลลัพธ์ให้คัดลอกนะคะ!', 'error');
+                showMessage('ไม่มีผลลัพธ์ให้คัดลอกนะคะ!', 'error', 'bottom'); // Show at bottom
                 return;
             }
             targetOutput.select();
             targetOutput.setSelectionRange(0, 99999); // For mobile devices
             try {
                 document.execCommand('copy');
-                showMessage('คัดลอกผลลัพธ์เรียบร้อยแล้วค่ะ! ✅');
+                showMessage('คัดลอกผลลัพธ์เรียบร้อยแล้วค่ะ! ✅', 'info', 'bottom'); // Show at bottom
             } catch (err) {
-                showMessage('ไม่สามารถคัดลอกได้ค่ะ ลองคัดลอกด้วยตัวเองดูนะคะ 🙁', 'error');
+                showMessage('ไม่สามารถคัดลอกได้ค่ะ ลองคัดลอกด้วยตัวเองดูนะคะ 🙁', 'error', 'bottom'); // Show at bottom
             }
         });
 
-        // Event listener for the new "Clear Source Input" button
+        // Event listener for the "Clear Source Input" button
         clearSourceInputBtn.addEventListener('click', () => {
             sourceInput.value = '';
             targetOutput.value = ''; // Also clear the target output
-            showMessage('ล้างข้อความด้านบนเรียบร้อยแล้วค่ะ! 🧹');
+            adjustTextareaHeight(sourceInput); // Adjust source height after clearing
+            adjustTextareaHeight(targetOutput); // Adjust target height after clearing
+            showMessage('ล้างข้อความด้านบนเรียบร้อยแล้วค่ะ! 🧹', 'info', 'top'); // Show at top
         });
 
-        // Optional: Clear target output and hide message when typing in source input
-        sourceInput.addEventListener('input', () => {
-            if (targetOutput.value !== '') {
-                // The auto-translation will handle updating, so no need to clear here.
-            }
+        // Initialize textarea heights on page load based on placeholder or initial content
+        window.addEventListener('load', () => {
+            adjustTextareaHeight(sourceInput);
+            adjustTextareaHeight(targetOutput);
+        });
+
+        // Also adjust if window resizes, though not strictly needed for dynamic height, good for general responsiveness
+        window.addEventListener('resize', () => {
+            adjustTextareaHeight(sourceInput);
+            adjustTextareaHeight(targetOutput);
         });
     </script>
 </body>
